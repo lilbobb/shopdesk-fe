@@ -6,16 +6,18 @@ import { Icons } from '@/components/ui/icons';
 interface DataTableColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
-  title: string;
+  title?: string;
+  children?: React.ReactNode;
 }
 
 export function DataTableColumnHeader<TData, TValue>({
   column,
   title,
   className,
+  children,
 }: DataTableColumnHeaderProps<TData, TValue>) {
   if (!column.getCanSort()) {
-    return <div className={cn(className)}>{title}</div>;
+    return <div className={cn(className)}> {children ? children : title}</div>;
   }
 
   return (
@@ -23,11 +25,11 @@ export function DataTableColumnHeader<TData, TValue>({
       <Button
         variant='ghost'
         size='sm'
-        className=' h-auto p-5 data-[state=open]:bg-accent w-full justify-start rounded-none'
+        className=' h-auto p-5 data-[state=open]:bg-accent w-full rounded-none'
         onClick={() => column.toggleSorting()}
       >
         <span className='uppercase md:text-lg font-medium text-[#090F1C]'>
-          {title}
+          {children ? children : title}
         </span>
         {column.getIsSorted() === 'desc' ? (
           <Icons.ArrowFilledDown />

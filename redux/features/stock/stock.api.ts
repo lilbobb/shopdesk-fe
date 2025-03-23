@@ -1,13 +1,20 @@
 import { api } from '@/redux/api';
-import type {
-  APIResponse,
-  PaginatedRequest,
-  PaginatedResponse,
-} from '@/types/global';
 
-// TODO: add these in your types.ts see auth.api.ts for more information
 interface StockBase {
-  // Types
+  id: string;
+  name: string;
+  quantity: number;
+  buying_price: number;
+  currency_code: string;
+  supplier_id: string | null;
+  buying_date: string;
+  product_id: string;
+  status: string;
+  user_id: string;
+  date_created: string;
+  original_quantity: number;
+  supplier: string | null;
+  timeslots: string[];
 }
 
 interface CreateStockRequest extends StockBase {
@@ -18,13 +25,11 @@ interface EditStockRequest extends StockBase {
   // Types
 }
 
-interface StockResponse extends StockBase {
-  // Types
-}
+interface StockResponse extends StockBase {}
 
 export const accessControlApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getStocks: builder.mutation<PaginatedResponse<StockResponse>, string>({
+    getStocks: builder.mutation<StockResponse[], string>({
       query: (organizatiohn_id: string) => ({
         url: `stocks/?organization_id=${organizatiohn_id}`,
         method: 'POST',

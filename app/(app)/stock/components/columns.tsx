@@ -6,20 +6,25 @@ import type { Stock } from '../data/schema';
 import { DataTableColumnHeader } from './data-table-column-header';
 import { DataTableRowActions } from './data-table-row-actions';
 import { EditableCell } from './editable-cell';
+import { Icons } from '@/components/ui/icons';
+import { Button } from '@/components/ui/button';
+
 
 export const columns: ColumnDef<Stock>[] = [
   {
     id: 'select',
     header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
-        className='translate-y-[2px]  translate-x-[85%] '
-      />
+      <div className='h-full p-2 w-full flex items-center justify-center'>
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label='Select all'
+          className='trans '
+        />
+      </div>
     ),
     cell: ({ row }) => (
       <Checkbox
@@ -51,17 +56,19 @@ export const columns: ColumnDef<Stock>[] = [
     },
   },
   {
-    accessorKey: 'sell_price',
+    accessorKey: 'buying_price',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='SELL PRICE' />
     ),
     cell: ({ row }) => {
-      const value = row.getValue<string>('sell_price');
+      const value = row.getValue<string>('buying_price');
+
       return (
         <EditableCell
           value={value}
+          currency={row.original.currency_code}
           onChange={(val) => {
-            row.original.sell_price = val;
+            row.original.buying_price = val;
           }}
         />
       );
@@ -71,6 +78,31 @@ export const columns: ColumnDef<Stock>[] = [
     accessorKey: 'available',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='AVAILABLE' />
+    ),
+    cell: ({ row }) => {
+      const value = row.getValue<string>('quantity');
+
+      return (
+        <EditableCell
+          value={value}
+          onChange={(val) => {
+            row.original.quantity = val;
+          }}
+        />
+      );
+    },
+  },
+  {
+    accessorKey: 'sales',
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        className='flex items-center justify-center'
+      >
+        <Button className='bg-[#F6F8FA] hover:bg-[#F6F8FA]/80 duration-150 transition-all rounded-[6px] border border-[#DEE5ED] uppercase text-lg text-[#090F1C] py-1.5 px-4 h-auto'>
+          SHOW SALES
+        </Button>
+      </DataTableColumnHeader>
     ),
     cell: ({ row }) => {
       const value = row.getValue<string>('available');
@@ -83,10 +115,47 @@ export const columns: ColumnDef<Stock>[] = [
         />
       );
     },
+    enableSorting: false,
   },
-
+  {
+    accessorKey: 'profitGroup',
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        className='flex items-center justify-center'
+      >
+        <Button className='bg-[#F6F8FA] hover:bg-[#F6F8FA]/80 duration-150 transition-all rounded-[6px] border border-[#DEE5ED] uppercase text-lg text-[#090F1C] py-1.5 px-4 h-auto'>
+          SHOW PROFIT
+        </Button>
+      </DataTableColumnHeader>
+    ),
+    cell: ({ row }) => {
+      const value = row.getValue<string>('available');
+      return (
+        <EditableCell
+          value={value}
+          onChange={(val) => {
+            row.original.available = val;
+          }}
+        />
+      );
+    },
+    enableSorting: false,
+  },
   {
     id: 'actions',
+    header: ({ column }) => {
+      return (
+        <div
+          className='h-full py-5 px-4 flex items-center justify-center bg-transparent hover:bg-black/10 transition-all duration-150 shadow-none cursor-pointer'
+          title='Add new Column'
+        >
+          <div className='py-1.5 px-2'>
+            <Icons.plus className='shrink-0' />
+          </div>
+        </div>
+      );
+    },
     cell: ({ row }) => <DataTableRowActions row={row} />,
   },
 ];

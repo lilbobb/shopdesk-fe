@@ -5,10 +5,11 @@ import { useState, useEffect, useRef } from 'react';
 
 type EditableCellProps = {
   value: string;
+  currency?: string;
   onChange: (newValue: string) => void;
 };
 
-export function EditableCell({ value, onChange }: EditableCellProps) {
+export function EditableCell({ value, currency, onChange }: EditableCellProps) {
   const [editing, setEditing] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +27,7 @@ export function EditableCell({ value, onChange }: EditableCellProps) {
     }
   };
 
-  return !editing ? (
+  return editing ? (
     <Input
       ref={inputRef}
       value={internalValue}
@@ -41,16 +42,20 @@ export function EditableCell({ value, onChange }: EditableCellProps) {
           setEditing(false);
         }
       }}
-      className='border-none p-5 rounded-none text-sm w-full h-full focus-visible:outline-none focus-visible:border-2 focus-visible:ring-[#B2E1C8] focus-visible:z-10 relative'
+      className='border-none p-5  rounded-none text-sm w-full h-full focus-visible:outline-none focus-visible:border-2 focus-visible:ring-[#B2E1C8] focus-visible:z-10 relative'
     />
   ) : (
-    <div
-      className='flex space-x-2 p-5'
+    <Input
+      ref={inputRef}
+      value={
+        currency
+          ? `${currency ?? ''} ${internalValue.toLocaleString() ?? ''}`
+          : `${internalValue.toLocaleString() ?? ''}`
+      }
       onClick={() => setEditing(true)}
       onKeyDown={() => setEditing(true)}
-      title='Click to edit'
-    >
-      {value}
-    </div>
+      readOnly
+      className='border-none p-5  rounded-none text-sm w-full h-full focus-visible:outline-none focus-visible:border-2 focus-visible:ring-[#B2E1C8] focus-visible:z-10 relative'
+    />
   );
 }
