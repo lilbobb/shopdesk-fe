@@ -1,51 +1,61 @@
-"use client";
+'use client';
 
-import { getAccessToken } from "@/app/api/token";
-import LoadingAnimation from "@/components/functional/loading";
-import Logo from "@/components/functional/logo";
-import PaginationFeature from "@/components/functional/paginationfeature";
-import Sidebar from "@/components/functional/sidebar";
-import ImageUploader from "@/components/modal/add-image";
-import AddItemModal from "@/components/modal/add-item";
-import DeleteItem from "@/components/modal/delete-item";
-import EditItemModal from "@/components/modal/edit-stock";
-import LogoutConfirmModal from "@/components/modal/logoutConfirmationModal";
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import {
+  ChevronDown,
+  Edit,
+  Loader2,
+  MoreVertical,
+  SaveAll,
+  Trash2,
+  Plus,
+  X,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import EditItemModal from '@/components/modal/edit-stock';
+import AddItemModal from '@/components/modal/add-item';
+import DeleteItem from '@/components/modal/delete-item';
+import ImageUploader from '@/components/modal/add-image';
+import PaginationFeature from '@/components/functional/paginationfeature';
+import { useOrganization } from '@/app/api/useOrganization';
+import { useStore } from '@/store/useStore';
+import { FaSortDown } from 'react-icons/fa';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
+import LogoutConfirmModal from '@/components/modal/logoutConfirmationModal';
+import Image from 'next/image';
+import Logo from '@/components/functional/logo';
+import LoadingAnimation from '@/components/functional/loading';
 import {
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
   TableHeader,
+  TableBody,
   TableRow,
-} from "@/components/ui/table";
-import logout from "@/public/icons/_ui-log-out-02.svg";
-import settings from "@/public/icons/_ui-settings-01.svg";
-import viewDeleted from "@/public/icons/_ui-trash-03.svg";
-import box from "@/public/icons/box.svg";
-//import { deleteStock, GetProduct, GetStock } from '@/services/stock';
-import { useStore } from "@/store/useStore";
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import useTableAreaHeight from './hooks/useTableAreaHeight';
+import { deleteStock, GetProduct, GetStock } from '@/services/stock';
+import { Search } from 'lucide-react';
+import box from '@/public/icons/box.svg';
 import {
   ColumnDef,
-  flexRender,
   getCoreRowModel,
   useReactTable,
-} from "@tanstack/react-table";
-import { ChevronDown, Loader2, Plus, Search, X } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FaSortDown } from "react-icons/fa";
-import useTableAreaHeight from "./hooks/useTableAreaHeight";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+  flexRender,
+} from '@tanstack/react-table';
+import { getAccessToken } from '@/app/api/token';
+import Sidebar from '@/components/functional/sidebar';
 
-declare module "@tanstack/react-table" {
+import { Separator } from '@radix-ui/react-dropdown-menu';
+
+import SalesTab from '@/components/functional/salestab';
+
+declare module '@tanstack/react-table' {
   interface ColumnMeta<TData, TValue> {
     className?: string;
     updateData?: (rowIndex: number, key: string, value: string) => void;
@@ -102,15 +112,14 @@ export type ProductItem = {
 };
 
 const Page = () => {
-  const { organizationId, organizationName } = useStore();
+  const { organizationId, organizationName, organizationInitial } = useStore();
 
   const { tableAreaRef, tableAreaHeight } = useTableAreaHeight();
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [organizationInitial, setOrganizationInitial] = useState("");
 
   //Active Tab
-  const [activeTab, setActiveTab] = useState("stock");
+  const [activeTab, setActiveTab] = useState('stock');
 
   const [isOpen, setIsOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -125,7 +134,7 @@ const Page = () => {
 
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isEditingTransition, setIsEditingTransition] = useState<string | null>(
     null
@@ -146,21 +155,9 @@ const Page = () => {
 
   const [showProfit, setShowProfit] = useState(false);
 
-  // Set initials for Avatar fallback on nav menu
-  useEffect(() => {
-    setOrganizationInitial(
-      organizationName
-        ? organizationName
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase())
-            .join("")
-        : ""
-    );
-  }, [organizationName]);
-
   const toggleSales = () => {
     if (isSidebarOpen) {
-      alert("First close the sidebar to view Sales.");
+      alert('First close the sidebar to view Sales.');
       return;
     }
     setShowSales((prev) => !prev);
@@ -168,7 +165,7 @@ const Page = () => {
 
   const toggleProfit = () => {
     if (isSidebarOpen) {
-      alert("First close the sidebar to view Profit.");
+      alert('First close the sidebar to view Profit.');
       return;
     }
     setShowProfit((prev) => !prev);
@@ -224,37 +221,37 @@ const Page = () => {
 
   useEffect(() => {
     let isMounted = true; // Prevents state updates if component unmounts
-    //setIsLoading(true);
+    setIsLoading(true);
 
-    // const fetchProductsAndStocks = async () => {
-    //   try {
-    //     // Fetch products
-    //     const productData: any = await GetProduct();
-    //     if (!isMounted) return; // Prevent state update if unmounted
-    //     setProductItems(productData.items);
+    const fetchProductsAndStocks = async () => {
+      try {
+        // Fetch products
+        const productData: any = await GetProduct();
+        if (!isMounted) return; // Prevent state update if unmounted
+        setProductItems(productData.items);
 
-    //     // Fetch stock for each product
-    //     const stockData = await Promise.all(
-    //       productData.items.map((product: any) => GetStock(product.id))
-    //     );
+        // Fetch stock for each product
+        const stockData = await Promise.all(
+          productData.items.map((product: any) => GetStock(product.id))
+        );
 
-    //     if (!isMounted) return;
-    //     const formattedStockItems = stockData.flatMap((data, index) =>
-    //       data.items.map((stock: any) => ({
-    //         ...stock,
-    //         sku: productData.items[index]?.unique_id,
-    //       }))
-    //     );
+        if (!isMounted) return;
+        const formattedStockItems = stockData.flatMap((data, index) =>
+          data.items.map((stock: any) => ({
+            ...stock,
+            sku: productData.items[index]?.unique_id,
+          }))
+        );
 
-    //     setStockItems(formattedStockItems);
-    //   } catch (error) {
-    //     console.error("Error fetching products or stocks:", error);
-    //   } finally {
-    //     if (isMounted) setIsLoading(false);
-    //   }
-    // };
+        setStockItems(formattedStockItems);
+      } catch (error) {
+        console.error('Error fetching products or stocks:', error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
 
-    // fetchProductsAndStocks();
+    fetchProductsAndStocks();
 
     return () => {
       isMounted = false;
@@ -290,17 +287,17 @@ const Page = () => {
     setSelectedItem(null);
   };
 
-  // const handleDeleteItem = async (itemId: string) => {
-  //   try {
-  //     await deleteStock(itemId);
-  //     setIsDeleteModalOpen(false);
-  //     setStockItems((prev) =>
-  //       prev.filter((item) => item.product_id !== itemId)
-  //     );
-  //   } catch (error) {
-  //     console.error("Error deleting stock:", error);
-  //   }
-  // };
+  const handleDeleteItem = async (itemId: string) => {
+    try {
+      await deleteStock(itemId);
+      setIsDeleteModalOpen(false);
+      setStockItems((prev) =>
+        prev.filter((item) => item.product_id !== itemId)
+      );
+    } catch (error) {
+      console.error('Error deleting stock:', error);
+    }
+  };
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -314,7 +311,7 @@ const Page = () => {
   };
 
   const handleInlineEdit = useCallback(
-    (item: StockItem, field: keyof StockItem = "name") => {
+    (item: StockItem, field: keyof StockItem = 'name') => {
       setIsEditingTransition(item.id);
       setEditedItem({ ...item });
       setActiveField(field);
@@ -329,7 +326,7 @@ const Page = () => {
         setEditedItem((prev) => ({
           ...prev!,
           [field]:
-            field === "quantity" || field === "buying_price"
+            field === 'quantity' || field === 'buying_price'
               ? Number(value)
               : value,
         }));
@@ -347,10 +344,10 @@ const Page = () => {
       const token = await getAccessToken();
       setIsEditingTransition(editedItem.id);
 
-      const response = await fetch("/api/stocks/edit", {
-        method: "PUT",
+      const response = await fetch('/api/stocks/edit', {
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -364,7 +361,7 @@ const Page = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update stock item");
+        throw new Error('Failed to update stock item');
       }
 
       setStockItems((prevItems) =>
@@ -375,15 +372,15 @@ const Page = () => {
 
       setEditedItem(null);
     } catch (error) {
-      console.error("Error saving changes:", error);
-      alert("Failed to save changes. Please try again.");
+      console.error('Error saving changes:', error);
+      alert('Failed to save changes. Please try again.');
     } finally {
       setIsEditingTransition(null);
     }
   };
 
   useEffect(() => {
-    if (organizationId === "160db8736a9d47989381e01a987e4413") {
+    if (organizationId === '160db8736a9d47989381e01a987e4413') {
       setIsPremium(true);
     } else {
       setIsPremium(false);
@@ -394,28 +391,28 @@ const Page = () => {
   //   setIsPremium(false)
   // }
 
-  // useEffect(() => {
-  //   if (editedItem && activeField) {
-  //     switch (activeField) {
-  //       case 'name':
-  //         nameInputRef.current?.focus();
-  //         break;
-  //       case 'buying_price':
-  //         priceInputRef.current?.focus();
-  //         break;
-  //       case 'quantity':
-  //         quantityInputRef.current?.focus();
-  //         break;
-  //     }
-  //   }
-  // }, [editedItem, activeField]);
+  useEffect(() => {
+    if (editedItem && activeField) {
+      switch (activeField) {
+        case 'name':
+          nameInputRef.current?.focus();
+          break;
+        case 'buying_price':
+          priceInputRef.current?.focus();
+          break;
+        case 'quantity':
+          quantityInputRef.current?.focus();
+          break;
+      }
+    }
+  }, [editedItem, activeField]);
 
   const columns: ColumnDef<StockItem>[] = useMemo(
     () => [
       {
-        accessorKey: "name",
+        accessorKey: 'name',
         header: () => (
-          <span className="!px-4 flex flex-start font-circular-medium  text-[18px] leading-[28px] tracking-normal text-center  w-full">
+          <span className='!px-4 flex flex-start font-circular-medium  text-[18px] leading-[28px] tracking-normal text-center  w-full'>
             ITEM NAME
           </span>
         ),
@@ -425,23 +422,23 @@ const Page = () => {
 
           return (
             <div
-              className="w-full h-full flex items-center overflow-hidden"
+              className='w-full h-full flex items-center overflow-hidden'
               onClick={() =>
-                !isEditingThisRow && handleInlineEdit(row.original, "name")
+                !isEditingThisRow && handleInlineEdit(row.original, 'name')
               }
             >
               {isTransitioning ? (
-                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                <Loader2 className='w-4 h-4 animate-spin mx-auto' />
               ) : isEditingThisRow ? (
                 <input
                   ref={nameInputRef}
-                  value={editedItem?.name || ""}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSaveInline()}
-                  className="no-spinner w-full h-full min-w-0 border text-left box-border p-2 focus:outline-[#009A49]"
+                  value={editedItem?.name || ''}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveInline()}
+                  className='no-spinner w-full h-full min-w-0 border text-left box-border p-2 focus:outline-[#009A49]'
                 />
               ) : (
-                <span className="block text-balance py-2 pl-4">
+                <span className='block text-balance py-2 pl-4'>
                   {row.original.name}
                 </span>
               )}
@@ -450,9 +447,9 @@ const Page = () => {
         },
       },
       {
-        accessorKey: "sell_price",
+        accessorKey: 'sell_price',
         header: () => (
-          <span className="!px-4 font-circular-medium text-[18px] leading-[28px] tracking-normal text-center">
+          <span className='!px-4 font-circular-medium text-[18px] leading-[28px] tracking-normal text-center'>
             SELL PRICE
           </span>
         ),
@@ -462,27 +459,27 @@ const Page = () => {
 
           return (
             <div
-              className="flex w-full h-full items-center justify-center"
+              className='flex w-full h-full items-center justify-center'
               onClick={() =>
                 !isEditingThisRow &&
-                handleInlineEdit(row.original, "buying_price")
+                handleInlineEdit(row.original, 'buying_price')
               }
             >
               {isTransitioning ? (
-                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                <Loader2 className='w-4 h-4 animate-spin mx-auto' />
               ) : isEditingThisRow ? (
                 <input
                   ref={priceInputRef}
-                  type="number"
-                  value={editedItem?.buying_price ?? ""}
+                  type='number'
+                  value={editedItem?.buying_price ?? ''}
                   onChange={(e) =>
-                    handleInputChange("buying_price", e.target.value)
+                    handleInputChange('buying_price', e.target.value)
                   }
-                  onKeyDown={(e) => e.key === "Enter" && handleSaveInline()}
-                  className="no-spinner w-full h-full border text-center focus:outline-[#009A49]"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveInline()}
+                  className='no-spinner w-full h-full border text-center focus:outline-[#009A49]'
                 />
               ) : (
-                <span className="block w-full overflow-x-clip">{`${
+                <span className='block w-full overflow-x-clip'>{`${
                   row.original.currency_code
                 } ${row.original.buying_price?.toLocaleString()}`}</span>
               )}
@@ -491,9 +488,9 @@ const Page = () => {
         },
       },
       {
-        accessorKey: "available",
+        accessorKey: 'available',
         header: () => (
-          <span className="!px-4 font-circular-medium text-[18px] leading-[28px] tracking-normal text-center">
+          <span className='!px-4 font-circular-medium text-[18px] leading-[28px] tracking-normal text-center'>
             AVAILABLE
           </span>
         ),
@@ -503,23 +500,23 @@ const Page = () => {
 
           return (
             <div
-              className="flex h-full w-full items-center justify-center"
+              className='flex h-full w-full items-center justify-center'
               onClick={() =>
-                !isEditingThisRow && handleInlineEdit(row.original, "quantity")
+                !isEditingThisRow && handleInlineEdit(row.original, 'quantity')
               }
             >
               {isTransitioning ? (
-                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                <Loader2 className='w-4 h-4 animate-spin mx-auto' />
               ) : isEditingThisRow ? (
                 <input
                   ref={quantityInputRef}
-                  type="number"
-                  value={editedItem?.quantity ?? ""}
+                  type='number'
+                  value={editedItem?.quantity ?? ''}
                   onChange={(e) =>
-                    handleInputChange("quantity", e.target.value)
+                    handleInputChange('quantity', e.target.value)
                   }
-                  onKeyDown={(e) => e.key === "Enter" && handleSaveInline()}
-                  className="no-spinner w-full h-full border px-2 py-1 text-center focus:outline-[#009A49]"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveInline()}
+                  className='no-spinner w-full h-full border px-2 py-1 text-center focus:outline-[#009A49]'
                 />
               ) : (
                 row.original.quantity
@@ -527,44 +524,44 @@ const Page = () => {
             </div>
           );
         },
-        meta: { className: "" },
+        meta: { className: '' },
       },
       {
-        accessorKey: "sales",
+        accessorKey: 'sales',
         header: () =>
           showSales ? (
-            <div className="bg-[#CCEBDB] relative w-full h-full">
-              <div className="flex justify-between items-center max-w-[356px] py-4">
-                <span className="text-[#595959] font-circular-medium text-[14px] text-center w-full">
+            <div className='bg-[#CCEBDB] relative w-full h-full'>
+              <div className='flex justify-between items-center max-w-[356px] py-4'>
+                <span className='text-[#595959] font-circular-medium text-[14px] text-center w-full'>
                   SALES
                 </span>
                 <button
                   onClick={toggleSales}
-                  className="rounded-[6px] border border-green-200 hover:bg-gray-200"
+                  className='rounded-[6px] border border-green-200 hover:bg-gray-200'
                 >
-                  <X className="rounded-[6px] py-[4px] px-[8px] bg-white w-full h-full" />
+                  <X className='rounded-[6px] py-[4px] px-[8px] bg-white w-full h-full' />
                 </button>
               </div>
 
-              <div className="grid grid-cols-5 text-center border-t border-[#B2E1C8]">
-                {["MON", "TUE", "WED", "THU", "FRI"].map((day, index) => (
+              <div className='grid grid-cols-5 text-center border-t border-[#B2E1C8]'>
+                {['MON', 'TUE', 'WED', 'THU', 'FRI'].map((day, index) => (
                   <div
                     key={day}
                     className={`flex items-center justify-center text-[12px] gap-1 text-gray-700 font-circular-medium py-[9px] ${
-                      index !== 4 ? "border-r border-[#B2E1C8]" : ""
+                      index !== 4 ? 'border-r border-[#B2E1C8]' : ''
                     }`}
                   >
                     {day}
-                    <FaSortDown className="w-[13px] h-[13px] text-[#83838B] mb-1" />
+                    <FaSortDown className='w-[13px] h-[13px] text-[#83838B] mb-1' />
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="flex justify-center items-center w-full p-4">
+            <div className='flex justify-center items-center w-full p-4'>
               <button
                 onClick={toggleSales}
-                className="bg-[#F6F8FA] border border-[#DEE5ED] rounded-[6px] font-circular-medium text-[#090F1C] py-2 px-4"
+                className='bg-[#F6F8FA] border border-[#DEE5ED] rounded-[6px] font-circular-medium text-[#090F1C] py-2 px-4'
               >
                 SHOW SALES
               </button>
@@ -572,49 +569,49 @@ const Page = () => {
           ),
         cell: ({ row }) =>
           showSales ? (
-            <div className="grid grid-cols-5 h-full w-full px-0">
-              {["mon", "tue", "wed", "thu", "fri"].map((day) => (
+            <div className='grid grid-cols-5 h-full w-full px-0'>
+              {['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => (
                 <input
                   key={day}
-                  type="number"
-                  className="no-spinner w-full h-full border-r px-2 py-1 text-center focus:outline-[#009A49]"
+                  type='number'
+                  className='no-spinner w-full h-full border-r px-2 py-1 text-center focus:outline-[#009A49]'
                 />
               ))}
             </div>
           ) : null,
       },
       {
-        accessorKey: "profitGroup",
+        accessorKey: 'profitGroup',
         header: () =>
           showProfit ? (
-            <div className="relative w-full h-full border border-[#CCEAFF]">
-              <div className="bg-[#E5F4FF] flex justify-between items-center max-w-[356px] p-3">
-                <span className="text-[#595959] font-circular-medium text-[14px] text-center w-full">
+            <div className='relative w-full h-full border border-[#CCEAFF]'>
+              <div className='bg-[#E5F4FF] flex justify-between items-center max-w-[356px] p-3'>
+                <span className='text-[#595959] font-circular-medium text-[14px] text-center w-full'>
                   PROFIT
                 </span>
                 <button
                   onClick={toggleProfit}
-                  className="rounded-[6px] border border-green-200 hover:bg-gray-200"
+                  className='rounded-[6px] border border-green-200 hover:bg-gray-200'
                 >
-                  <X className="rounded-[6px] py-[4px] px-[8px] bg-white w-full h-full" />
+                  <X className='rounded-[6px] py-[4px] px-[8px] bg-white w-full h-full' />
                 </button>
               </div>
-              <div className="bg-[#E5F4FF] grid grid-cols-2 text-center border-t border-[#B2E1C8]">
-                <div className="flex items-center justify-center gap-2 text-gray-700 font-circular-medium py-[9px] border-r border-[#B2E1C8]">
+              <div className='bg-[#E5F4FF] grid grid-cols-2 text-center border-t border-[#B2E1C8]'>
+                <div className='flex items-center justify-center gap-2 text-gray-700 font-circular-medium py-[9px] border-r border-[#B2E1C8]'>
                   <span>COST PRICE</span>
-                  <FaSortDown className="w-[12px] h-[12px] text-[#83838B] mb-1" />
+                  <FaSortDown className='w-[12px] h-[12px] text-[#83838B] mb-1' />
                 </div>
-                <div className="flex items-center justify-center gap-2 text-gray-700 font-circular-medium py-[9px]">
+                <div className='flex items-center justify-center gap-2 text-gray-700 font-circular-medium py-[9px]'>
                   <span>PROFIT</span>
-                  <FaSortDown className="w-[12px] h-[12px] text-[#83838B] mb-1" />
+                  <FaSortDown className='w-[12px] h-[12px] text-[#83838B] mb-1' />
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex justify-center items-center w-full p-4">
+            <div className='flex justify-center items-center w-full p-4'>
               <button
                 onClick={toggleProfit}
-                className="bg-[#F6F8FA] border border-[#DEE5ED] rounded-[6px] font-circular-medium text-[#090F1C] py-2 px-4"
+                className='bg-[#F6F8FA] border border-[#DEE5ED] rounded-[6px] font-circular-medium text-[#090F1C] py-2 px-4'
               >
                 SHOW PROFIT
               </button>
@@ -624,32 +621,32 @@ const Page = () => {
           showProfit ? (
             <div
               className={`flex items-center justify-between w-full h-full ${
-                showProfit ? "" : "hidden sm:table-cell"
+                showProfit ? '' : 'hidden sm:table-cell'
               }`}
             >
               <input
-                type="number"
+                type='number'
                 onBlur={(e) =>
                   column.columnDef.meta?.updateData?.(
                     row.index,
-                    "costPrice",
+                    'costPrice',
                     e.target.value
                   )
                 }
-                className="w-1/2 px-2 py-1 border-r border-gray-300 h-full text-center"
-                placeholder="CP"
+                className='w-1/2 px-2 py-1 border-r border-gray-300 h-full text-center'
+                placeholder='CP'
               />
               <input
-                type="number"
+                type='number'
                 onBlur={(e) =>
                   column.columnDef.meta?.updateData?.(
                     row.index,
-                    "profit",
+                    'profit',
                     e.target.value
                   )
                 }
-                className="w-1/2 px-2 py-1 border-gray-300 h-full text-center"
-                placeholder="Profit"
+                className='w-1/2 px-2 py-1 border-gray-300 h-full text-center'
+                placeholder='Profit'
               />
             </div>
           ) : null,
@@ -663,10 +660,10 @@ const Page = () => {
       },
 
       {
-        id: "actions",
+        id: 'actions',
         header: () => (
-          <div className="flex justify-center items-center">
-            <Plus className="w-[15px] h-[15px] text-[#2A2A2A] self-center" />
+          <div className='flex justify-center items-center'>
+            <Plus className='w-[15px] h-[15px] text-[#2A2A2A] self-center' />
           </div>
         ),
         cell: () => null, // Empty cell
@@ -702,7 +699,7 @@ const Page = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className='flex h-screen items-center justify-center'>
         <LoadingAnimation />
       </div>
     );
@@ -718,86 +715,69 @@ const Page = () => {
   };
 
   return (
-    <main className="px-6 py-4 w-full max-w-7xl mx-auto flex flex-col main-h-svh ">
-      <div ref={tableAreaRef} className="space-y-8 w-full h-full ">
+    <main className='px-6 py-4 w-full max-w-7xl mx-auto flex flex-col main-h-svh '>
+      <div ref={tableAreaRef} className='space-y-8 w-full h-full '>
         <LogoutConfirmModal
           open={isLogoutModalOpen}
-          onOpenChange={(open) => setIsLogoutModalOpen(open)}
+          onOpenChange={setIsLogoutModalOpen}
+          onCancel={() => setIsLogoutModalOpen(false)}
         />
 
-        {/* <DeleteItem
+        <DeleteItem
           open={isDeleteModalOpen}
           onOpenChange={setIsDeleteModalOpen}
           onCancel={() => setIsDeleteModalOpen(false)}
           onDelete={handleDeleteItem}
           selectedItem={
             selectedItem
-              ? { product_id: selectedItem.product_id ?? "" }
+              ? { product_id: selectedItem.product_id ?? '' }
               : undefined
           }
-        /> */}
-        <div className="lg:border px-4 py-2 lg:shadow-md rounded-lg lg:flex items-center justify-between mx-auto">
-          <div className="flex items-center gap-6">
-            <div className="flex justify-center lg:justify-start w-full lg:w-auto">
+        />
+        <div className='lg:border px-4 py-2 lg:shadow-md rounded-lg lg:flex items-center justify-between mx-auto'>
+          <div className='flex items-center gap-6'>
+            <div className='flex justify-center lg:justify-start w-full lg:w-auto'>
               <Logo />
             </div>
-            <small className="text-black text-left hidden lg:block">
+            <small className='text-black text-left hidden lg:block'>
               The simplest way to manage your shop!
             </small>
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger className="btn-primary hover:cursor-pointer hidden lg:flex items-center gap-2 text-white">
-              <Avatar className="rounded-lg">
-                <AvatarFallback className="text-black rounded-lg py-2 px-4 ">
-                  {organizationInitial}
-                </AvatarFallback>
-              </Avatar>
-              {organizationName}
-              <ChevronDown strokeWidth={1.5} color="white" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem className="p-4  w-[200px] flex">
-                <Image src={viewDeleted} alt="" width={20} height={20} />
-                View Deleted
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/dashboard/settings"
-                  className="flex items-center gap-2 !p-4 w-[200px]"
-                >
-                  <Image
-                    src={settings}
-                    className=""
-                    alt=""
-                    width={20}
-                    height={20}
-                  />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="p-4  w-[200px] text-[#ff1925] "
-                onClick={() => setIsLogoutModalOpen(true)}
+          <div className=''>
+            <DropdownMenu modal>
+              <DropdownMenuTrigger
+                disabled
+                className='btn-primary hover:cursor-pointer hidden lg:flex items-center gap-2 text-white'
               >
-                <Image src={logout} alt="" width={20} height={20} />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <span className='py-2 px-4 rounded-lg bg-white text-black'>
+                  {organizationInitial}
+                </span>
+                {organizationName}
+                <ChevronDown strokeWidth={1.5} color='white' />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  className='w-full px-[5rem]'
+                  onClick={() => setIsLogoutModalOpen(true)}
+                >
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        <div className="space-y-0 w-full ">
-          <div className="w-full flex justify-between max-[800px]:flex-col-reverse">
+        <div className='space-y-0 w-full '>
+          <div className='w-full flex justify-between max-[800px]:flex-col-reverse'>
             <div>
-              <div className="flex items-center justify-center gap-2 border border-b-white py-2 rounded-tr-lg rounded-tl-lg w-44 max-[800px]:w-full font-semibold px-9 shadow-inner">
+              <div className='flex items-center justify-center gap-2 border border-b-white py-2 rounded-tr-lg rounded-tl-lg w-44 max-[800px]:w-full font-semibold px-9 shadow-inner'>
                 Stock
                 <Image
-                  src="/icons/ui-box.svg"
-                  alt=""
+                  src='/icons/ui-box.svg'
+                  alt=''
                   width={20}
                   height={20}
-                  className="w-5 h-5"
+                  className='w-5 h-5'
                 />
               </div>
 
@@ -809,15 +789,15 @@ const Page = () => {
              // /> */}
             </div>
             {stockItems.length > 0 && (
-              <div className="mb-2 max-[800px]:mb-4 max-[640px]:self-end flex items-center justify-center max-[1000px]:flex-row-reverse max-[800px]:w-full">
-                <div className="relative group inline-block">
+              <div className='mb-2 max-[800px]:mb-4 max-[640px]:self-end flex items-center justify-center max-[1000px]:flex-row-reverse max-[800px]:w-full'>
+                <div className='relative group inline-block'>
                   {/* Tooltip */}
                   {!isPremium && stockItems.length >= 10 && (
-                    <div className="z-50 absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm rounded-md px-3 py-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className='z-50 absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm rounded-md px-3 py-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity'>
                       Upgrade to Premium to add more.
                       <a
-                        href="/dashboard/billing"
-                        className="text-blue-400 underline ml-1 "
+                        href='/pricing'
+                        className='text-blue-400 underline ml-1 '
                       >
                         Upgrade now
                       </a>
@@ -827,7 +807,7 @@ const Page = () => {
                   {/* Button */}
                   <button
                     onClick={openModal}
-                    className="btn-primary max-[400px]:text-sm text-nowrap max-[1000px]:hidden mr-2 disabled:opacity-50"
+                    className='btn-primary max-[400px]:text-sm text-nowrap max-[1000px]:hidden mr-2 disabled:opacity-50'
                     disabled={!isPremium && stockItems.length >= 10}
                   >
                     + Add New
@@ -835,15 +815,15 @@ const Page = () => {
                 </div>
                 <button
                   onClick={openModal}
-                  className="btn-primary max-[400px]:text-sm text-nowrap min-[1000px]:hidden ml-2"
+                  className='btn-primary max-[400px]:text-sm text-nowrap min-[1000px]:hidden ml-2'
                 >
                   +
                 </button>
 
-                <div className="relative max-[800px]:w-full">
+                <div className='relative max-[800px]:w-full'>
                   <input
-                    type="text"
-                    className="h-12 border w-[327px] max-[800px]:w-full rounded-md focus:outline-2 focus:outline-[#009A49] px-10"
+                    type='text'
+                    className='h-12 border w-[327px] max-[800px]:w-full rounded-md focus:outline-2 focus:outline-[#009A49] px-10'
                     onChange={(event) => {
                       setIsSearching(true);
                       setSearchText(event.target.value);
@@ -853,10 +833,10 @@ const Page = () => {
                     }}
                   />
 
-                  <Search className="text-[#667085] absolute top-3 left-3 " />
+                  <Search className='text-[#667085] absolute top-3 left-3 ' />
                 </div>
 
-                <div className="z-10">
+                <div className='z-10'>
                   <AddItemModal
                     isOpen={isOpen}
                     onClose={closeModal}
@@ -870,60 +850,60 @@ const Page = () => {
               </div>
             )}
           </div>
-          <div className="flex w-full overflow-hidden mx-auto">
+          <div className='flex w-full overflow-hidden mx-auto'>
             <div
               className={`border shadow-md rounded-b-lg rounded-bl-lg relative rounded-tr-lg flex-1 overflow-auto w-full transition-all duration-300 ease-in-out ${
-                isSidebarOpen ? "w-full max-w-[989px] mr-1" : "w-full"
+                isSidebarOpen ? 'w-full max-w-[989px] mr-1' : 'w-full'
               }`}
             >
               {stockItems.length === 0 ||
               (isSearching && filteredItems.length === 0) ? (
-                <div className="relative w-full">
-                  <Table className="bg-white border-0 border-collapse w-full">
+                <div className='relative w-full'>
+                  <Table className='bg-white border-0 border-collapse w-full'>
                     <TableHeader>
                       <TableHeader>
-                        <TableRow className="h-[50px] ">
-                          <TableHead className="text-[#090F1C] font-circular-medium text-left border-b border-r">
+                        <TableRow className='h-[50px] '>
+                          <TableHead className='text-[#090F1C] font-circular-medium text-left border-b border-r'>
                             ITEM NAME
                           </TableHead>
-                          <TableHead className="text-[#090F1C] font-circular-medium text-center border-b border-r px-4">
+                          <TableHead className='text-[#090F1C] font-circular-medium text-center border-b border-r px-4'>
                             SELLING PRICE
                           </TableHead>
-                          <TableHead className="text-[#090F1C] font-circular-medium text-center border-b border-r px-4">
+                          <TableHead className='text-[#090F1C] font-circular-medium text-center border-b border-r px-4'>
                             AVAILABLE
                           </TableHead>
-                          <TableHead className="text-[#090F1C] font-circular-medium text-center border-b border-r ">
+                          <TableHead className='text-[#090F1C] font-circular-medium text-center border-b border-r '>
                             SHOW SALES
                           </TableHead>
-                          <TableHead className="text-[#090F1C] font-circular-medium text-center border-b ">
+                          <TableHead className='text-[#090F1C] font-circular-medium text-center border-b '>
                             SHOW PROFIT
                           </TableHead>
-                          <TableHead className="">
-                            <Plus className="w-[16px] h-[16px] self-center" />
+                          <TableHead className=''>
+                            <Plus className='w-[16px] h-[16px] self-center' />
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                     </TableHeader>
                   </Table>
-                  <div className="w-full overflow-x-auto">
-                    <span className="w-full h-px bg-[#DEDEDE] block"></span>
-                    <div className="relative h-[80vh] w-full">
+                  <div className='w-full overflow-x-auto'>
+                    <span className='w-full h-px bg-[#DEDEDE] block'></span>
+                    <div className='relative h-[80vh] w-full'>
                       {!(isSearching && filteredItems.length === 0) ? (
-                        <div className="absolute space-y-4 right-0 left-0 top-28 w-56 mx-auto text-center">
+                        <div className='absolute space-y-4 right-0 left-0 top-28 w-56 mx-auto text-center'>
                           <Image
-                            src="/icons/empty-note-pad.svg"
-                            alt=""
+                            src='/icons/empty-note-pad.svg'
+                            alt=''
                             width={56}
                             height={56}
-                            className="mx-auto"
+                            className='mx-auto'
                           />
-                          <p className="text-[#888888] text-sm">
+                          <p className='text-[#888888] text-sm'>
                             You have 0 items in stock
                           </p>
                           <button
-                            type="button"
+                            type='button'
                             onClick={openModal}
-                            className="btn-outline hover:cursor-pointer"
+                            className='btn-outline hover:cursor-pointer'
                           >
                             + Add New Stock
                           </button>
@@ -937,16 +917,16 @@ const Page = () => {
                           />
                         </div>
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="bg-[#F8FAFB] border border-[#DEDEDE] w-[563px] h-[200px] rounded-lg flex flex-col items-center justify-center gap-3 max-[800px]:w-[343px] max-[800px]:h-[334px]">
+                        <div className='absolute inset-0 flex items-center justify-center'>
+                          <div className='bg-[#F8FAFB] border border-[#DEDEDE] w-[563px] h-[200px] rounded-lg flex flex-col items-center justify-center gap-3 max-[800px]:w-[343px] max-[800px]:h-[334px]'>
                             <Image
                               src={box}
-                              alt=""
+                              alt=''
                               width={56}
                               height={56}
-                              className="size-8"
+                              className='size-8'
                             />
-                            <p className="text-[#2A2A2A] text-sm">
+                            <p className='text-[#2A2A2A] text-sm'>
                               Search Item not found.
                             </p>
                           </div>
@@ -956,54 +936,54 @@ const Page = () => {
                   </div>
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
+                <div style={{ overflowX: 'auto' }}>
                   <Table
-                    style={{ minWidth: "800px", borderCollapse: "collapse" }}
+                    style={{ minWidth: '800px', borderCollapse: 'collapse' }}
                   >
                     <TableHeader>
                       {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id} className="h-[50px]">
+                        <TableRow key={headerGroup.id} className='h-[50px]'>
                           {headerGroup.headers.map((header) => {
-                            let widthClass = "w-auto"; // Default width of the header columns
+                            let widthClass = 'w-auto'; // Default width of the header columns
 
-                            // if (header.column.id === 'name') {
-                            //   widthClass =
-                            //     showSales && showProfit
-                            //       ? 'max-w-[259px]'
-                            //       : showSales
-                            //         ? 'max-w-[292px]'
-                            //         : showProfit
-                            //           ? 'max-w-[292px]'
-                            //           : 'max-w-[374px] pl-4';
-                            // } else if (header.column.id === 'sell_price') {
-                            //   widthClass =
-                            //     showSales && showProfit
-                            //       ? 'w-auto px-4'
-                            //       : showSales || showProfit
-                            //         ? 'w-[262px]'
-                            //         : 'w-[280px]';
-                            // } else if (header.column.id === 'available') {
-                            //   widthClass =
-                            //     showSales && showProfit
-                            //       ? 'w-auto px-4'
-                            //       : showSales || showProfit
-                            //         ? 'w-[206px]'
-                            //         : 'w-[198px]';
-                            // } else if (header.column.id === 'sales') {
-                            //   widthClass = showSales ? 'w-[30px]' : 'w-auto ';
-                            // } else if (header.column.id === 'profitGroup') {
-                            //   widthClass = showProfit ? 'w-[350px]' : 'w-auto ';
-                            // }
+                            if (header.column.id === 'name') {
+                              widthClass =
+                                showSales && showProfit
+                                  ? 'max-w-[259px]'
+                                  : showSales
+                                    ? 'max-w-[292px]'
+                                    : showProfit
+                                      ? 'max-w-[292px]'
+                                      : 'max-w-[374px] pl-4';
+                            } else if (header.column.id === 'sell_price') {
+                              widthClass =
+                                showSales && showProfit
+                                  ? 'w-auto px-4'
+                                  : showSales || showProfit
+                                    ? 'w-[262px]'
+                                    : 'w-[280px]';
+                            } else if (header.column.id === 'available') {
+                              widthClass =
+                                showSales && showProfit
+                                  ? 'w-auto px-4'
+                                  : showSales || showProfit
+                                    ? 'w-[206px]'
+                                    : 'w-[198px]';
+                            } else if (header.column.id === 'sales') {
+                              widthClass = showSales ? 'w-[30px]' : 'w-auto ';
+                            } else if (header.column.id === 'profitGroup') {
+                              widthClass = showProfit ? 'w-[350px]' : 'w-auto ';
+                            }
 
                             return (
                               <TableHead
                                 key={header.id}
                                 className={`text-[#090F1C] font-circular-medium text-center border-b border-r min-w-[100px] 
     ${
-      (showSales && !["name", "sales", "actions"].includes(header.id)) ||
-      (showProfit && !["name", "profitGroup", "actions"].includes(header.id))
-        ? "hidden sm:table-cell"
-        : ""
+      (showSales && !['name', 'sales', 'actions'].includes(header.id)) ||
+      (showProfit && !['name', 'profitGroup', 'actions'].includes(header.id))
+        ? 'hidden sm:table-cell'
+        : ''
     } ${widthClass}`}
                               >
                                 {flexRender(
@@ -1022,60 +1002,64 @@ const Page = () => {
                         return (
                           <TableRow
                             key={index}
-                            className="h-[50px] cursor-pointer"
-                            // onClick={() => handleRowClick(row.original)}
+                            className='h-[50px] cursor-pointer'
+                            onClick={() => row && handleRowClick(row.original)}
                           >
                             {row
                               ? row.getVisibleCells().map((cell) => {
-                                  let cellWidthClass = "w-auto"; // Default width
+                                  let cellWidthClass = 'w-auto'; // Default width
 
-                                  // if (cell.column.id === 'name') {
-                                  //   cellWidthClass =
-                                  //     showSales && showProfit
-                                  //       ? 'w-[259px]'
-                                  //       : showSales
-                                  //         ? 'w-[292px]'
-                                  //         : showProfit
-                                  //           ? 'w-[292px]'
-                                  //           : 'w-[374px]';
-                                  // } else if (
-                                  //   cell.column.id === 'price' ||
-                                  //   cell.column.id === 'available'
-                                  // ) {
-                                  //   cellWidthClass =
-                                  //     showSales && showProfit
-                                  //       ? 'w-auto px-4'
-                                  //       : showSales || showProfit
-                                  //         ? 'w-[262px]'
-                                  //         : 'w-[280px]';
-                                  // } else if (cell.column.id === 'sales') {
-                                  //   cellWidthClass = showSales
-                                  //     ? 'w-[356px]'
-                                  //     : 'w-auto px-3';
-                                  // } else if (cell.column.id === 'profit') {
-                                  //   cellWidthClass = showProfit
-                                  //     ? 'w-[362px]'
-                                  //     : 'w-auto px-3';
-                                  // }
+                                  if (cell.column.id === 'name') {
+                                    cellWidthClass =
+                                      showSales && showProfit
+                                        ? 'w-[259px]'
+                                        : showSales
+                                          ? 'w-[292px]'
+                                          : showProfit
+                                            ? 'w-[292px]'
+                                            : 'w-[374px]';
+                                  } else if (
+                                    cell.column.id === 'price' ||
+                                    cell.column.id === 'available'
+                                  ) {
+                                    cellWidthClass =
+                                      showSales && showProfit
+                                        ? 'w-auto px-4'
+                                        : showSales || showProfit
+                                          ? 'w-[262px]'
+                                          : 'w-[280px]';
+                                  } else if (cell.column.id === 'sales') {
+                                    cellWidthClass = showSales
+                                      ? 'w-[356px]'
+                                      : 'w-auto px-3';
+                                  } else if (cell.column.id === 'profit') {
+                                    cellWidthClass = showProfit
+                                      ? 'w-[362px]'
+                                      : 'w-auto px-3';
+                                  }
 
                                   return (
                                     <TableCell
                                       key={cell.id}
                                       className={`p-0 py-0 align-middle h-[50px] text-center border-r ${
-                                        (showSales &&
-                                          ![
-                                            "name",
-                                            "sales",
-                                            "actions",
-                                          ].includes(cell.column.id)) ||
-                                        (showProfit &&
-                                          ![
-                                            "name",
-                                            "profitGroup",
-                                            "actions",
-                                          ].includes(cell.column.id))
-                                          ? "hidden sm:table-cell"
-                                          : ""
+                                        (
+                                          showSales &&
+                                            ![
+                                              'name',
+                                              'sales',
+                                              'actions',
+                                            ].includes(cell.column.id)
+                                        ) ||
+                                        (
+                                          showProfit &&
+                                            ![
+                                              'name',
+                                              'profitGroup',
+                                              'actions',
+                                            ].includes(cell.column.id)
+                                        )
+                                          ? 'hidden sm:table-cell'
+                                          : ''
                                       } ${cellWidthClass}`}
                                     >
                                       {flexRender(
@@ -1088,9 +1072,9 @@ const Page = () => {
                               : columns.map((column) => (
                                   <TableCell
                                     key={column.id}
-                                    className="text-center border-r text-gray-400"
+                                    className='text-center border-r text-gray-400'
                                   >
-                                    {""} {/* Placeholder for missing row */}
+                                    {''} {/* Placeholder for missing row */}
                                   </TableCell>
                                 ))}
                           </TableRow>
@@ -1102,8 +1086,8 @@ const Page = () => {
                   <Table>
                     <TableBody>
                       <TableRow>
-                        <TableCell colSpan={columns.length} className="">
-                          {/* <PaginationFeature
+                        <TableCell colSpan={columns.length} className=''>
+                          <PaginationFeature
                             totalItems={
                               isSearching
                                 ? filteredItems.length
@@ -1114,7 +1098,7 @@ const Page = () => {
                             totalPages={totalPages}
                             onPageChange={handlePageChange}
                             onItemsPerPageChange={handleItemsPerPageChange}
-                          /> */}
+                          />
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -1125,7 +1109,7 @@ const Page = () => {
             {isSidebarOpen && (
               <Sidebar
                 key={
-                  selectedItem?.id + "-" + (selectedItem?.images?.length || 0)
+                  selectedItem?.id + '-' + (selectedItem?.images?.length || 0)
                 }
                 isOpen={isSidebarOpen}
                 onClose={closeSidebar}
@@ -1136,7 +1120,7 @@ const Page = () => {
             {/*Image Upload Modal */}
             {imageModalOpen && (
               <ImageUploader
-                itemName={currentItem?.name || ""}
+                itemName={currentItem?.name || ''}
                 existingImages={currentItem?.images || []}
                 onSave={handleSaveImages}
                 onCancel={() => setImageModalOpen(false)}
@@ -1154,8 +1138,8 @@ const Page = () => {
         onSave={handleSaveEdit}
       />
 
-      <div className="flex flex-col gap-2 mt-4">
-        <p className="text-center mt-4">
+      <div className='flex flex-col gap-2 mt-4'>
+        <p className='text-center mt-4'>
           © {new Date().getFullYear()}, Powered by Timbu Business
         </p>
       </div>
