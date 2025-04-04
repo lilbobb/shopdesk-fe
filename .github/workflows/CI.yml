@@ -43,7 +43,9 @@ jobs:
       #   run: bun test
       
       - name: Install Postman CLI
-        run: npm install -g postman-cli
+        run: | 
+          npm install -g postman-cli
+          echo "$(npm bin -g)" >> $GITHUB_PATH  # Add npm global binaries to PATH
       - name: Login to Postman CLI
         run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
       - name: Run QA Test
