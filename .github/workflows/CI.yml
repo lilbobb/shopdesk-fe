@@ -41,6 +41,15 @@ jobs:
 
       # - name: Run tests
       #   run: bun test
+      
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+      - name: Login to Postman CLI
+        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
+      - name: Run QA Test
+        run: |
+          postman collection run "30840973-35c6dce8-f965-4b14-949c-53eaea84c29f"
 
       - name: Log CI end time
         if: always()
