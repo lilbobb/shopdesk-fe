@@ -42,14 +42,34 @@ jobs:
       # - name: Run tests
       #   run: bun test
       
-      - name: Install Postman CLI
+      - name: Install Newman and reporters
         run: |
-          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
-      - name: Login to Postman CLI
-        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
-      - name: Run QA Test
+          npm install -g newman
+          npm install -g newman-reporter-cli
+          npm install -g newman-reporter-json
+          
+      - name: Run Postman Collection Tests
         run: |
-          postman collection run "30840973-35c6dce8-f965-4b14-949c-53eaea84c29f"
+          newman run "30840973-35c6dce8-f965-4b14-949c-53eaea84c29f" \
+          --api-key ${{ secrets.POSTMAN_API_KEY }} \
+          -r cli,json \
+          --reporter-json-export newman-report.json
+          
+      - name: Display Test Results
+        run: |
+          echo "=== Test Results Summary ==="
+          cat newman-report.json | jq -r '.run.stats'
+          echo "=== Failed Tests (if any) ==="
+          cat newman-report.json | jq -r '.run.failures[]?.error.message // "No failures"'
+          
+      - name: Create Test Summary
+        if: always()
+        run: |
+          echo "## Postman Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          cat newman-report.json | jq -r '.run.stats | "**Total Tests:** \(.total)\n**Passed:** \(.assertions.passed)\n**Failed:** \(.assertions.failed)\n**Skipped:** \(.assertions.skipped)"' >> $GITHUB_STEP_SUMMARY
+          echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+          cat newman-report.json | jq -r '.run.failures[]?.error.message // "No failures"' >> $GITHUB_STEP_SUMMARY
 
       - name: Log CI end time
         if: always()
