@@ -14,6 +14,7 @@ import toggleTableReducer from "./features/table/toggle.slice";
 import notificationsReducer from "./notificationlslice";
 import preferencesReducer from "./preferencesSlice";
 import productImageSliceReducer from "./features/productImage/productImage.slice";
+import usersReducer from "./userpermissionslice";
 
 const persistConfig = {
   key: "root",
@@ -36,6 +37,7 @@ const appReducer = combineReducers({
   notification: notificationsReducer,
   preferences: preferencesReducer,
   cart: cartReducer,
+  users: usersReducer,
   productImages: productImageSliceReducer,
   [api.reducerPath]: api.reducer,
 });

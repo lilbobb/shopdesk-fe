@@ -27,17 +27,18 @@ import EditImage from "../modal/edit-image";
 import Logo from "./logo";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+
 interface SidebarProps {
   selectedItem: any;
   setSelectedItem: React.Dispatch<React.SetStateAction<any>>;
-  onItemUpdate: (updatedItem: any) => void; // New prop
+  onItemUpdate: (updatedItem: any) => void;
   onClose: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   selectedItem, 
   setSelectedItem, 
-  onItemUpdate, // New prop
+  onItemUpdate,
   onClose 
 }) => {
   const dispatch = useAppDispatch();
@@ -52,6 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const productImages = useSelector(
     (state: RootState) => state.productImages.images
   );
+
   const handleSaveImages = (images: { filename: string; url: string }[]) => {
     const updatedItem = {
       ...selectedItem,
@@ -60,18 +62,23 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
     
     setSelectedItem(updatedItem);
-    
     onItemUpdate(updatedItem);
     
     dispatch(
       saveItem({
         ...updatedItem,
-        supplier: updatedItem.supplier || { id: "", name: "Unknown Supplier" }, // Provide a default Supplier
+        supplier: updatedItem.supplier || { id: "", name: "Unknown Supplier" },
       })
     );
-    isImageUploaderOpen
-      ? dispatch(closeImageUploader())
-      : dispatch(closeEditImageModal());
+    
+    const closeModal = () => {
+      if (isImageUploaderOpen) {
+        dispatch(closeImageUploader());
+      } else {
+        dispatch(closeEditImageModal());
+      }
+    };
+    closeModal();
   };
 
   const handleSavePrice = (updatedPrice: number) => {
@@ -198,18 +205,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   onClick={() => {
                     if (item.label === "Image") {
-                      productImages?.length
-                        ? dispatch(openEditImageModal())
-                        : dispatch(openImageUploader());
+                      if (productImages?.length) {
+                        dispatch(openEditImageModal());
+                      } else {
+                        dispatch(openImageUploader());
+                      }
                     } else if (item.label.includes("Price")) {
                       dispatch(openEditPrice());
                     } else if (item.label === "Available") {
                       dispatch(openEditQuantity());
-                    }else if (item.label === 'Discount') console.log('Discount clicked');
+                    } else if (item.label === 'Discount') console.log('Discount clicked');
                   }}
-                  className=' hover:cursor-pointer text-lg font-medium px-6 py-2 border border-[#A0A0A0] rounded-xl lg:border-none lg:text-[#009A49]'
+                  className='hover:cursor-pointer text-lg font-medium px-6 py-2 border border-[#A0A0A0] rounded-xl lg:border-none lg:text-[#009A49]'
                 >
-                   {(item.label === 'Image' || item.label === 'Discount') && item.showAdd ? 'Add' : 'Edit'}
+                  {(item.label === 'Image' || item.label === 'Discount') && item.showAdd ? 'Add' : 'Edit'}
                 </button>
               )}
             </div>
@@ -300,4 +309,5 @@ const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
 export default Sidebar;

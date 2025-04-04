@@ -23,6 +23,12 @@ const ReceiptItem: React.FC<ReceiptItemProps> = ({ stockItem }) => {
   );
   const [inputValue, setInputValue] = useState(cartItem?.quantity || 1 || '');
 
+  useEffect(() => {
+    if(cartItem) {
+    setInputValue(cartItem.quantity);
+  }
+ }, [cartItem?.quantity]);
+
   if (!cartItem) {
     return null;
   }
@@ -73,10 +79,6 @@ const ReceiptItem: React.FC<ReceiptItemProps> = ({ stockItem }) => {
       }
     }
   };
-
-  useEffect(() => {
-    setInputValue(cartItem.quantity);
-  }, [cartItem.quantity]);
 
   return (
     <div className='flex items-center justify-between py-2'>

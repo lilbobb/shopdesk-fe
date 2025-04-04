@@ -125,7 +125,7 @@ export default function SalesPage() {
   const completeSale = async () => {
     if (!organizationId) return;
 
-    let customer = customersData?.items?.[0]; // Pick the first customer if available
+    const customer = customersData?.items?.[0]; // Pick the first customer if available
 
     if (!customer) return;
 

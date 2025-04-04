@@ -54,7 +54,7 @@ export function DeactivateModal({
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-1 text-center px-4">
             <p className="text-[#717171] text-lg font-[300] text-center">
-              Once deactivated you won't be able to access your data. You can
+              Once deactivated you won&apos;t be able to access your data. You can
               reactivate by logging in again. Do you still want to proceed?
             </p>
           </AlertDialogDescription>

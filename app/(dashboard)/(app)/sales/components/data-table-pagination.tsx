@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/select';
 import type { Table } from '@tanstack/react-table';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 // import Image from 'next/image';
 
 interface DataTablePaginationProps<TData> {
@@ -41,7 +42,7 @@ export function DataTablePagination<TData>({
             <SelectTrigger className='h-8 w-auto p-0 border-none shadow-none focus:ring-0 focus:ring-offset-0 [&>svg]:hidden'>
               <span className='flex items-center ml-1 text-[#2A2A2A]'>
                 {viewType === 'Flat' ? 'Flat / All Time' : viewType}
-                <img
+                <Image
                   src='/icons/downarrow.png'
                   alt='chevron-down'
                   className='h-2 w-2 mx-1'
