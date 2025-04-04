@@ -42,35 +42,14 @@ jobs:
       # - name: Run tests
       #   run: bun test
       
-      - name: Install Postman CLI and reporters
+      - name: Install Postman CLI
         run: |
-          npm install -g newman
-          npm install -g newman-reporter-htmlextra
-          npm install -g newman-reporter-json
-          npm install -g newman-reporter-cli
-        
-      - name: Run Postman Collection
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+      - name: Login to Postman CLI
+        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
+      - name: Run QA Test
         run: |
-          newman run "30840973-35c6dce8-f965-4b14-949c-53eaea84c29f" \
-            --api-key ${{ secrets.POSTMAN_API_KEY }} \
-            -r cli,json \
-            --reporter-json-export newman-report.json
-        
-      - name: Display Test Results
-        run: |
-          echo "=== Test Results Summary ==="
-          cat newman-report.json | jq -r '.run.stats'
-          echo "=== Failed Tests (if any) ==="
-          cat newman-report.json | jq -r '.run.failures[]?.error.message // "No failures"'
-        
-      - name: Create Test Summary
-        if: always()
-        run: |
-          echo "## Test Results for Run ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "### Summary" >> $GITHUB_STEP_SUMMARY
-          cat newman-report.json | jq -r '.run.stats | "**Total Tests:** \(.total)\n**Passed:** \(.assertions.passed)\n**Failed:** \(.assertions.failed)\n**Skipped:** \(.assertions.skipped)"' >> $GITHUB_STEP_SUMMARY
-          echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
-          cat newman-report.json | jq -r '.run.failures[]?.error.message // "No failures"' >> $GITHUB_STEP_SUMMARY 
+          postman collection run "30840973-35c6dce8-f965-4b14-949c-53eaea84c29f"
 
       - name: Log CI end time
         if: always()
@@ -104,5 +83,3 @@ jobs:
           # TYPE ci_failure gauge
           ci_failure{workflow="ci"} $([ "${{ env.CI_STATUS }}" == "failure" ] && echo 1 || echo 0)
           EOF
-
-      
